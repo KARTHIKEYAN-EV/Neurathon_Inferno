@@ -1,34 +1,37 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { Shield, Search, Filter, MapPin, DollarSign, Briefcase, Flag, ExternalLink, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import StatusBadge from "@/components/StatusBadge";
-
-const mockJobs = [
-  { id: 1, title: "Frontend Developer Intern", company: "TechCorp", location: "Remote", salary: "₹15,000/mo", type: "Internship", domain: "Technology", risk: "low" as const },
-  { id: 2, title: "Data Analyst", company: "AnalyticsPro", location: "Bangalore", salary: "₹6,00,000/yr", type: "Full-time", domain: "Data Science", risk: "low" as const },
-  { id: 3, title: "UI/UX Designer", company: "DesignStudio", location: "Mumbai", salary: "₹4,50,000/yr", type: "Full-time", domain: "Design", risk: "low" as const },
-  { id: 4, title: "Marketing Intern", company: "BrandWorks", location: "Remote", salary: "₹10,000/mo", type: "Internship", domain: "Marketing", risk: "low" as const },
-  { id: 5, title: "Backend Engineer", company: "CloudBase", location: "Hyderabad", salary: "₹8,00,000/yr", type: "Full-time", domain: "Technology", risk: "low" as const },
-  { id: 6, title: "Content Writer Intern", company: "MediaHub", location: "Remote", salary: "₹8,000/mo", type: "Internship", domain: "Content", risk: "low" as const },
-];
-
+import { jobAPI, type Job } from "@/lib/api";
 const StudentDashboard = () => {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [selectedJob, setSelectedJob] = useState<typeof mockJobs[0] | null>(null);
-
-  const filtered = mockJobs.filter((job) => {
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const loadJobs = useCallback(() => {
+    const approved = jobAPI.getAllJobs().filter(j => j.status === "approved");
+    setJobs(approved);
+  }, []);
+  useEffect(() => {
+    loadJobs();
+    const handler = () => loadJobs();
+    window.addEventListener("jobnexis-sync", handler);
+    const interval = setInterval(loadJobs, 2000);
+    return () => {
+      window.removeEventListener("jobnexis-sync", handler);
+      clearInterval(interval);
+    };
+  }, [loadJobs]);
+  const filtered = jobs.filter((job) => {
     const matchSearch = job.title.toLowerCase().includes(search.toLowerCase()) || job.company.toLowerCase().includes(search.toLowerCase());
-    const matchType = typeFilter === "all" || job.type.toLowerCase() === typeFilter;
+    const matchType = typeFilter === "all" || job.jobType.toLowerCase() === typeFilter;
     return matchSearch && matchType;
   });
-
   return (
     <div className="min-h-screen bg-background">
-      {/* Top bar */}
       <header className="bg-card border-b border-border sticky top-0 z-40">
         <div className="container mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -41,14 +44,11 @@ const StudentDashboard = () => {
           </Button>
         </div>
       </header>
-
       <main className="container mx-auto px-4 py-6">
         <div className="mb-6">
           <h1 className="font-display text-2xl font-bold text-foreground">Find Safe Jobs</h1>
           <p className="text-sm text-muted-foreground">All listings are verified and AI-cleared</p>
         </div>
-
-        {/* Search & Filters */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -66,9 +66,7 @@ const StudentDashboard = () => {
             </SelectContent>
           </Select>
         </div>
-
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Job list */}
           <div className="lg:col-span-2 space-y-3">
             {filtered.map((job) => (
               <button
@@ -84,7 +82,7 @@ const StudentDashboard = () => {
                     </p>
                     <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {job.location}</span>
-                      <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" /> {job.salary}</span>
+                      <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" /> ₹{job.salaryMin} - ₹{job.salaryMax}</span>
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1.5">
@@ -98,8 +96,6 @@ const StudentDashboard = () => {
               <div className="text-center py-12 text-muted-foreground">No jobs found matching your criteria.</div>
             )}
           </div>
-
-          {/* Job detail panel */}
           <div className="bg-card rounded-xl border border-border p-5 h-fit sticky top-20">
             {selectedJob ? (
               <div className="space-y-4">
@@ -116,16 +112,18 @@ const StudentDashboard = () => {
                 </div>
                 <div className="space-y-2 text-sm">
                   <p><strong className="text-foreground">Location:</strong> <span className="text-muted-foreground">{selectedJob.location}</span></p>
-                  <p><strong className="text-foreground">Salary:</strong> <span className="text-muted-foreground">{selectedJob.salary}</span></p>
-                  <p><strong className="text-foreground">Type:</strong> <span className="text-muted-foreground">{selectedJob.type}</span></p>
-                  <p><strong className="text-foreground">Domain:</strong> <span className="text-muted-foreground">{selectedJob.domain}</span></p>
+                  <p><strong className="text-foreground">Salary:</strong> <span className="text-muted-foreground">₹{selectedJob.salaryMin} - ₹{selectedJob.salaryMax}</span></p>
+                  <p><strong className="text-foreground">Type:</strong> <span className="text-muted-foreground">{selectedJob.jobType}</span></p>
+                  <p><strong className="text-foreground">Description:</strong> <span className="text-muted-foreground">{selectedJob.description}</span></p>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   This position has been verified by our team and cleared by AI fraud detection. It is safe to apply.
                 </p>
                 <div className="flex gap-2">
-                  <Button className="flex-1">
-                    <ExternalLink className="h-4 w-4 mr-1" /> Apply Now
+                  <Button className="flex-1" asChild>
+                    <a href={selectedJob.applicationLink} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4 mr-1" /> Apply Now
+                    </a>
                   </Button>
                   <Button variant="outline" size="icon">
                     <Flag className="h-4 w-4" />
@@ -144,5 +142,4 @@ const StudentDashboard = () => {
     </div>
   );
 };
-
 export default StudentDashboard;

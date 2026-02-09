@@ -50,7 +50,7 @@ const riskConfig = {
 interface JobPostingFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onJobSubmitted?: (job: JobFormData & { risk: RiskLevel }) => void;
+  onJobSubmitted?: (job: JobFormData & { risk: RiskLevel; flags: string[] }) => void;
 }
 
 const JobPostingForm = ({ open, onOpenChange, onJobSubmitted }: JobPostingFormProps) => {
@@ -95,7 +95,7 @@ const JobPostingForm = ({ open, onOpenChange, onJobSubmitted }: JobPostingFormPr
   };
 
   const handleSubmit = () => {
-    onJobSubmitted?.({ ...formData, risk: riskLevel });
+    onJobSubmitted?.({ ...formData, risk: riskLevel, flags });
     toast({
       title: riskLevel === "high" ? "Job Auto-Blocked" : "Job Submitted",
       description: riskLevel === "high"

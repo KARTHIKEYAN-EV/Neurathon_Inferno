@@ -1,9 +1,9 @@
 import { Link } from "react-router-dom";
-import { Shield, Users, Briefcase, AlertTriangle, Flag, CheckCircle, XCircle, LogOut, Eye, Ban, MoreHorizontal } from "lucide-react";
+import { Shield, Users, Briefcase, AlertTriangle, Flag, CheckCircle, XCircle, LogOut, Eye, Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StatusBadge from "@/components/StatusBadge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   jobAPI,
   recruiterAPI,
@@ -39,87 +39,63 @@ const AdminDashboard = () => {
   const [reports, setReports] = useState<Report[]>([]);
   const [activeTab, setActiveTab] = useState("recruiters");
 
-  // Load initial data
-  useEffect(() => {
-    loadData();
+  const loadData = useCallback(() => {
+    setStats(getAdminStats());
+    setPendingRecruiters(recruiterAPI.getPendingRecruiters());
+    setPendingJobs(jobAPI.getPendingJobs());
+    setReports(reportAPI.getReports());
   }, []);
 
-  const loadData = () => {
-    // Load stats
-    const newStats = getAdminStats();
-    setStats(newStats);
-
-    // Load pending recruiters
-    const recruiters = recruiterAPI.getPendingRecruiters();
-    setPendingRecruiters(recruiters);
-
-    // Load pending jobs
-    const jobs = jobAPI.getPendingJobs();
-    setPendingJobs(jobs);
-
-    // Load reports
-    const reportList = reportAPI.getReports();
-    setReports(reportList);
-  };
+  useEffect(() => {
+    loadData();
+    const handler = () => loadData();
+    window.addEventListener("jobnexis-sync", handler);
+    // Poll every 2s so cross-tab changes are picked up
+    const interval = setInterval(loadData, 2000);
+    return () => {
+      window.removeEventListener("jobnexis-sync", handler);
+      clearInterval(interval);
+    };
+  }, [loadData]);
 
   const handleApproveRecruiter = (id: number) => {
-    if (recruiterAPI.approveRecruiter(id)) {
-      setPendingRecruiters(prev => prev.filter(rec => rec.id !== id));
-      setStats(prev => ({ ...prev, pendingVerifications: prev.pendingVerifications - 1 }));
-    }
+    recruiterAPI.approveRecruiter(id);
+    loadData();
   };
 
   const handleRejectRecruiter = (id: number) => {
-    if (recruiterAPI.rejectRecruiter(id)) {
-      setPendingRecruiters(prev => prev.filter(rec => rec.id !== id));
-      setStats(prev => ({ ...prev, pendingVerifications: prev.pendingVerifications - 1 }));
-    }
+    recruiterAPI.rejectRecruiter(id);
+    loadData();
   };
 
   const handleApproveJob = (id: number) => {
-    if (jobAPI.approveJob(id)) {
-      setPendingJobs(prev => prev.filter(job => job.id !== id));
-      setStats(prev => ({ ...prev, jobsAwaitingApproval: prev.jobsAwaitingApproval - 1 }));
-    }
+    jobAPI.approveJob(id);
+    loadData();
   };
 
   const handleRejectJob = (id: number) => {
-    if (jobAPI.rejectJob(id)) {
-      setPendingJobs(prev => prev.filter(job => job.id !== id));
-      setStats(prev => ({ ...prev, jobsAwaitingApproval: prev.jobsAwaitingApproval - 1 }));
-    }
+    jobAPI.rejectJob(id);
+    loadData();
   };
 
   const handleBanJob = (id: number) => {
-    if (jobAPI.banJob(id)) {
-      setPendingJobs(prev => prev.filter(job => job.id !== id));
-      setStats(prev => ({
-        ...prev,
-        jobsAwaitingApproval: prev.jobsAwaitingApproval - 1,
-        flaggedJobs: Math.max(0, prev.flaggedJobs - 1)
-      }));
-    }
+    jobAPI.banJob(id);
+    loadData();
   };
 
   const handleReviewReport = (id: number) => {
-    if (reportAPI.reviewReport(id)) {
-      setReports(prev => prev.filter(report => report.id !== id));
-      setStats(prev => ({ ...prev, reports: prev.reports - 1 }));
-    }
+    reportAPI.reviewReport(id);
+    loadData();
   };
 
   const handleRemoveJob = (id: number) => {
-    if (reportAPI.resolveReport(id, 'remove')) {
-      setReports(prev => prev.filter(report => report.id !== id));
-      setStats(prev => ({ ...prev, reports: prev.reports - 1 }));
-    }
+    reportAPI.resolveReport(id, "remove");
+    loadData();
   };
 
   const handleDismissReport = (id: number) => {
-    if (reportAPI.resolveReport(id, 'dismiss')) {
-      setReports(prev => prev.filter(report => report.id !== id));
-      setStats(prev => ({ ...prev, reports: prev.reports - 1 }));
-    }
+    reportAPI.resolveReport(id, "dismiss");
+    loadData();
   };
 
   const statsData = [
@@ -148,7 +124,6 @@ const AdminDashboard = () => {
       <main className="container mx-auto px-4 py-6 space-y-6">
         <h1 className="font-display text-2xl font-bold text-foreground">Admin Dashboard</h1>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {statsData.map((stat) => (
             <div key={stat.label} className="bg-card rounded-xl border border-border p-4 space-y-1">
@@ -206,7 +181,7 @@ const AdminDashboard = () => {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Reject Recruiter Verification?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  This will reject {rec.company}'s verification request. They will need to reapply.
+                                  This will reject {rec.company}'s verification request.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
@@ -272,14 +247,12 @@ const AdminDashboard = () => {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Reject Job Posting?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  This will reject "{job.title}" at {job.company}. The recruiter will be notified.
+                                  This will reject "{job.title}" at {job.company}.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleRejectJob(job.id)}>
-                                  Confirm Reject
-                                </AlertDialogAction>
+                                <AlertDialogAction onClick={() => handleRejectJob(job.id)}>Confirm Reject</AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
@@ -293,14 +266,12 @@ const AdminDashboard = () => {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Ban Job Posting?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  This will permanently ban "{job.title}" at {job.company} and prevent it from being reposted.
+                                  This will permanently ban "{job.title}" at {job.company}.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleBanJob(job.id)}>
-                                  Confirm Ban
-                                </AlertDialogAction>
+                                <AlertDialogAction onClick={() => handleBanJob(job.id)}>Confirm Ban</AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
@@ -352,36 +323,26 @@ const AdminDashboard = () => {
                             <AlertDialogContent>
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Remove Reported Job?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This will remove the reported job from the platform.
-                                </AlertDialogDescription>
+                                <AlertDialogDescription>This will remove the reported job from the platform.</AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleRemoveJob(r.id)}>
-                                  Confirm Remove
-                                </AlertDialogAction>
+                                <AlertDialogAction onClick={() => handleRemoveJob(r.id)}>Confirm Remove</AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button size="sm" variant="secondary">
-                                Dismiss
-                              </Button>
+                              <Button size="sm" variant="secondary">Dismiss</Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Dismiss Report?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This will dismiss the report as invalid.
-                                </AlertDialogDescription>
+                                <AlertDialogDescription>This will dismiss the report as invalid.</AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDismissReport(r.id)}>
-                                  Confirm Dismiss
-                                </AlertDialogAction>
+                                <AlertDialogAction onClick={() => handleDismissReport(r.id)}>Confirm Dismiss</AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>

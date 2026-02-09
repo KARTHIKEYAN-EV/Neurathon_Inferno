@@ -1,14 +1,19 @@
-import { toast } from "@/hooks/use-toast";
+// Shared localStorage-based API for syncing data between Admin and Recruiter dashboards
 
-// Types
 export interface Job {
     id: number;
     title: string;
+    description: string;
+    location: string;
+    salaryMin: string;
+    salaryMax: string;
+    jobType: string;
+    applicationLink: string;
     company: string;
-    risk: 'low' | 'medium' | 'high';
+    risk: "low" | "medium" | "high";
     flags: string[];
-    status: 'pending' | 'approved' | 'rejected' | 'banned';
-    createdAt: string;
+    status: "pending" | "approved" | "rejected" | "banned";
+    submittedAt: string;
 }
 
 export interface Recruiter {
@@ -16,8 +21,7 @@ export interface Recruiter {
     company: string;
     email: string;
     website: string;
-    linkedin: string;
-    status: 'pending' | 'approved' | 'rejected';
+    status: "pending" | "approved" | "rejected";
 }
 
 export interface Report {
@@ -26,153 +30,182 @@ export interface Report {
     reason: string;
     reporter: string;
     date: string;
-    status: 'pending' | 'reviewed' | 'resolved';
+    status: "pending" | "reviewed" | "resolved";
 }
 
-// Simulated database (in real app, this would be backend API calls)
-let pendingJobs: Job[] = [
-    { id: 1, title: "Social Media Manager", company: "BrandWorks", risk: "medium", flags: ["Vague description", "No salary info"], status: "pending", createdAt: "2026-02-08" },
-    { id: 2, title: "Remote Data Entry", company: "QuickJobs", risk: "high", flags: ["Payment requested", "Guaranteed income"], status: "pending", createdAt: "2026-02-07" },
-    { id: 3, title: "Software Engineer", company: "CloudBase", risk: "low", flags: [], status: "pending", createdAt: "2026-02-09" },
+// ---- Storage helpers ----
+const JOBS_KEY = "jobnexis_jobs";
+const RECRUITERS_KEY = "jobnexis_recruiters";
+const REPORTS_KEY = "jobnexis_reports";
+
+function getStore<T>(key: string, fallback: T[]): T[] {
+    try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+    } catch {
+        return fallback;
+    }
+}
+
+function setStore<T>(key: string, data: T[]) {
+    localStorage.setItem(key, JSON.stringify(data));
+    // Dispatch a custom event so other tabs/components can react
+    window.dispatchEvent(new CustomEvent("jobnexis-sync", { detail: { key } }));
+}
+
+// ---- Seed data ----
+const seedJobs: Job[] = [
+    {
+        id: 1, title: "Frontend Developer Intern", description: "Build UI components with React.",
+        location: "Remote", salaryMin: "15000", salaryMax: "25000", jobType: "internship",
+        applicationLink: "https://example.com/apply", company: "TechCorp",
+        risk: "low", flags: [], status: "approved", submittedAt: "2026-02-01",
+    },
+    {
+        id: 2, title: "Backend Engineer", description: "Design scalable APIs with Node.js.",
+        location: "Bangalore", salaryMin: "40000", salaryMax: "70000", jobType: "full-time",
+        applicationLink: "https://example.com/apply2", company: "DataWorks",
+        risk: "low", flags: [], status: "pending", submittedAt: "2026-02-05",
+    },
+    {
+        id: 3, title: "Marketing Associate", description: "Pay a registration fee to earn guaranteed job placement with unlimited income potential.",
+        location: "Delhi", salaryMin: "20000", salaryMax: "30000", jobType: "full-time",
+        applicationLink: "https://example.com/apply3", company: "GrowthInc",
+        risk: "medium", flags: ["Payment request detected"], status: "pending", submittedAt: "2026-02-07",
+    },
+    {
+        id: 4, title: "Data Entry Specialist", description: "Earn $5000 per day working from home. No experience needed, guaranteed job offer with advance payment required.",
+        location: "Work From Home", salaryMin: "100000", salaryMax: "500000", jobType: "full-time",
+        applicationLink: "https://scam.example.com", company: "QuickCash Ltd",
+        risk: "high", flags: ["Unrealistic salary promise", "Payment request detected", "Guaranteed job claim"], status: "pending", submittedAt: "2026-02-08",
+    },
 ];
 
-let pendingRecruiters: Recruiter[] = [
-    { id: 1, company: "InnoTech Solutions", email: "hr@innotech.com", website: "innotech.com", linkedin: "linkedin.com/company/innotech", status: "pending" },
-    { id: 2, company: "DataMinds AI", email: "careers@dataminds.ai", website: "dataminds.ai", linkedin: "linkedin.com/company/dataminds", status: "pending" },
+const seedRecruiters: Recruiter[] = [
+    { id: 1, company: "TechCorp", email: "hr@techcorp.com", website: "techcorp.com", status: "approved" },
+    { id: 2, company: "DataWorks", email: "hire@dataworks.io", website: "dataworks.io", status: "pending" },
+    { id: 3, company: "GrowthInc", email: "jobs@growthinc.in", website: "growthinc.in", status: "pending" },
+    { id: 4, company: "QuickCash Ltd", email: "apply@quickcash.biz", website: "quickcash.biz", status: "pending" },
 ];
 
-let reports: Report[] = [
-    { id: 1, job: "Virtual Assistant Role", reason: "Payment request", reporter: "student@univ.edu", date: "2026-02-08", status: "pending" },
-    { id: 2, job: "Freelance Writer", reason: "Fake company", reporter: "user@gmail.com", date: "2026-02-07", status: "pending" },
+const seedReports: Report[] = [
+    { id: 1, job: "Social Media Manager", reason: "Requests personal bank details", reporter: "user42@gmail.com", date: "2026-02-06", status: "pending" },
+    { id: 2, job: "Customer Support Agent", reason: "Fake company details", reporter: "student99@mail.com", date: "2026-02-07", status: "pending" },
 ];
 
-// Job Functions
+function ensureSeeded() {
+    if (!localStorage.getItem(JOBS_KEY)) setStore(JOBS_KEY, seedJobs);
+    if (!localStorage.getItem(RECRUITERS_KEY)) setStore(RECRUITERS_KEY, seedRecruiters);
+    if (!localStorage.getItem(REPORTS_KEY)) setStore(REPORTS_KEY, seedReports);
+}
+
+ensureSeeded();
+
+// ---- Job API ----
 export const jobAPI = {
-    getPendingJobs: () => {
-        return pendingJobs.filter(job => job.status === 'pending');
+    getAllJobs: (): Job[] => getStore<Job>(JOBS_KEY, seedJobs),
+
+    getPendingJobs: (): Job[] => jobAPI.getAllJobs().filter(j => j.status === "pending"),
+
+    getJobsByCompany: (company: string): Job[] => jobAPI.getAllJobs().filter(j => j.company === company),
+
+    addJob: (job: Omit<Job, "id" | "submittedAt">): Job => {
+        const jobs = jobAPI.getAllJobs();
+        const newJob: Job = {
+            ...job,
+            id: Date.now(),
+            submittedAt: new Date().toISOString().split("T")[0],
+        };
+        setStore(JOBS_KEY, [...jobs, newJob]);
+        return newJob;
     },
 
-    getAllJobs: () => {
-        return [...pendingJobs];
+    approveJob: (id: number): boolean => {
+        const jobs = jobAPI.getAllJobs();
+        const idx = jobs.findIndex(j => j.id === id);
+        if (idx === -1) return false;
+        jobs[idx].status = "approved";
+        setStore(JOBS_KEY, jobs);
+        return true;
     },
 
-    approveJob: (id: number) => {
-        const job = pendingJobs.find(job => job.id === id);
-        if (job) {
-            job.status = 'approved';
-            toast({
-                title: "Job Approved",
-                description: `${job.title} at ${job.company} has been approved.`,
-            });
-            return true;
-        }
-        return false;
+    rejectJob: (id: number): boolean => {
+        const jobs = jobAPI.getAllJobs();
+        const idx = jobs.findIndex(j => j.id === id);
+        if (idx === -1) return false;
+        jobs[idx].status = "rejected";
+        setStore(JOBS_KEY, jobs);
+        return true;
     },
 
-    rejectJob: (id: number) => {
-        const job = pendingJobs.find(job => job.id === id);
-        if (job) {
-            job.status = 'rejected';
-            toast({
-                title: "Job Rejected",
-                description: `${job.title} at ${job.company} has been rejected.`,
-            });
-            return true;
-        }
-        return false;
-    },
-
-    banJob: (id: number) => {
-        const job = pendingJobs.find(job => job.id === id);
-        if (job) {
-            job.status = 'banned';
-            toast({
-                title: "Job Banned",
-                description: `${job.title} at ${job.company} has been banned.`,
-                variant: "destructive",
-            });
-            return true;
-        }
-        return false;
+    banJob: (id: number): boolean => {
+        const jobs = jobAPI.getAllJobs();
+        const idx = jobs.findIndex(j => j.id === id);
+        if (idx === -1) return false;
+        jobs[idx].status = "banned";
+        setStore(JOBS_KEY, jobs);
+        return true;
     },
 };
 
-// Recruiter Functions
+// ---- Recruiter API ----
 export const recruiterAPI = {
-    getPendingRecruiters: () => {
-        return pendingRecruiters.filter(rec => rec.status === 'pending');
+    getAllRecruiters: (): Recruiter[] => getStore<Recruiter>(RECRUITERS_KEY, seedRecruiters),
+
+    getPendingRecruiters: (): Recruiter[] => recruiterAPI.getAllRecruiters().filter(r => r.status === "pending"),
+
+    approveRecruiter: (id: number): boolean => {
+        const recs = recruiterAPI.getAllRecruiters();
+        const idx = recs.findIndex(r => r.id === id);
+        if (idx === -1) return false;
+        recs[idx].status = "approved";
+        setStore(RECRUITERS_KEY, recs);
+        return true;
     },
 
-    approveRecruiter: (id: number) => {
-        const recruiter = pendingRecruiters.find(rec => rec.id === id);
-        if (recruiter) {
-            recruiter.status = 'approved';
-            toast({
-                title: "Recruiter Approved",
-                description: `${recruiter.company} has been approved.`,
-            });
-            return true;
-        }
-        return false;
-    },
-
-    rejectRecruiter: (id: number) => {
-        const recruiter = pendingRecruiters.find(rec => rec.id === id);
-        if (recruiter) {
-            recruiter.status = 'rejected';
-            toast({
-                title: "Recruiter Rejected",
-                description: `${recruiter.company} has been rejected.`,
-                variant: "destructive",
-            });
-            return true;
-        }
-        return false;
+    rejectRecruiter: (id: number): boolean => {
+        const recs = recruiterAPI.getAllRecruiters();
+        const idx = recs.findIndex(r => r.id === id);
+        if (idx === -1) return false;
+        recs[idx].status = "rejected";
+        setStore(RECRUITERS_KEY, recs);
+        return true;
     },
 };
 
-// Report Functions
+// ---- Report API ----
 export const reportAPI = {
-    getReports: () => {
-        return reports.filter(report => report.status === 'pending');
+    getReports: (): Report[] => getStore<Report>(REPORTS_KEY, seedReports).filter(r => r.status === "pending"),
+
+    reviewReport: (id: number): boolean => {
+        const reps = getStore<Report>(REPORTS_KEY, seedReports);
+        const idx = reps.findIndex(r => r.id === id);
+        if (idx === -1) return false;
+        reps[idx].status = "reviewed";
+        setStore(REPORTS_KEY, reps);
+        return true;
     },
 
-    reviewReport: (id: number) => {
-        const report = reports.find(report => report.id === id);
-        if (report) {
-            report.status = 'reviewed';
-            toast({
-                title: "Report Reviewed",
-                description: `Report for "${report.job}" has been marked as reviewed.`,
-            });
-            return true;
-        }
-        return false;
-    },
-
-    resolveReport: (id: number, action: 'remove' | 'dismiss') => {
-        const report = reports.find(report => report.id === id);
-        if (report) {
-            report.status = 'resolved';
-            toast({
-                title: action === 'remove' ? "Job Removed" : "Report Dismissed",
-                description: action === 'remove'
-                    ? `The reported job has been removed.`
-                    : `The report has been dismissed.`,
-            });
-            return true;
-        }
-        return false;
+    resolveReport: (id: number, action: "remove" | "dismiss"): boolean => {
+        const reps = getStore<Report>(REPORTS_KEY, seedReports);
+        const idx = reps.findIndex(r => r.id === id);
+        if (idx === -1) return false;
+        reps[idx].status = "resolved";
+        setStore(REPORTS_KEY, reps);
+        return true;
     },
 };
 
-// Stats Function
+// ---- Admin stats ----
 export const getAdminStats = () => {
+    const jobs = jobAPI.getAllJobs();
+    const recruiters = recruiterAPI.getAllRecruiters();
+    const reports = reportAPI.getReports();
     return {
-        totalUsers: 1248,
-        pendingVerifications: recruiterAPI.getPendingRecruiters().length,
-        jobsAwaitingApproval: jobAPI.getPendingJobs().length,
-        flaggedJobs: pendingJobs.filter(job => job.risk === 'high').length,
-        reports: reportAPI.getReports().length,
+        totalUsers: recruiters.length + 120, // simulated user count
+        pendingVerifications: recruiters.filter(r => r.status === "pending").length,
+        jobsAwaitingApproval: jobs.filter(j => j.status === "pending").length,
+        flaggedJobs: jobs.filter(j => j.risk === "high").length,
+        reports: reports.length,
     };
 };
