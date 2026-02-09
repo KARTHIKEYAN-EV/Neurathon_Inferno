@@ -1,84 +1,73 @@
-﻿# JOBNEXIS - Neurathon_Inferno
+# Welcome to your Lovable project
 
-# Fake-Free Job & Internship Platform 🚫💼
+## Project info
 
-A web-based platform designed to protect students from fake job and internship scams by allowing only verified recruiters and using AI-based fraud detection.
+**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
 
----
+## How can I edit this code?
 
-## 📌 Problem Statement
-Students often fall victim to fake job and internship postings, leading to financial loss and career confusion. Most existing job portals lack strong employer verification and proactive scam detection mechanisms.
+There are several ways of editing your application.
 
----
+**Use Lovable**
 
-## 💡 Solution
-The Fake-Free Job & Internship Platform ensures that only genuine opportunities are visible to students by combining:
-- Employer Verification
-- AI-Based Fraud Detection
-- Real-Time Job Validation
+Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
 
-This approach prevents scams **before** students apply.
+Changes made via Lovable will be committed automatically to this repo.
 
----
+**Use your preferred IDE**
 
-## ⚙️ How It Works
-1. Recruiter signs up using official company details  
-2. Company email and website are verified  
-3. Recruiter posts a job  
-4. AI scans job descriptions for scam patterns  
-5. High-risk or fake jobs are blocked  
-6. Students can view and apply only to verified jobs  
+If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
 
----
+The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
-## 🧠 Key Features
-- Verified recruiter badge  
-- AI-based scam detection using NLP  
-- Admin dashboard for monitoring and approvals  
-- Safe job listings for students  
-- Job reporting system  
+Follow these steps:
 
----
+```sh
+# Step 1: Clone the repository using the project's Git URL.
+git clone <YOUR_GIT_URL>
 
-## 🛠️ Technology Stack
-- **Frontend:** React.js, Tailwind CSS  
-- **Backend:** Node.js, Express.js, Firebase  
-- **AI / ML:** Python, NLP-based keyword analysis  
+# Step 2: Navigate to the project directory.
+cd <YOUR_PROJECT_NAME>
 
----
+# Step 3: Install the necessary dependencies.
+npm i
 
-## 🌍 Impact
-- Protects students from job scams  
-- Reduces financial fraud  
-- Builds trust in online recruitment platforms  
+# Step 4: Start the development server with auto-reloading and an instant preview.
+npm run dev
+```
 
----
+**Edit a file directly in GitHub**
 
-## 🚀 Future Enhancements
-- Mobile application  
-- Advanced AI fraud detection models  
-- Blockchain-based employer verification  
-- College and campus partnerships  
+- Navigate to the desired file(s).
+- Click the "Edit" button (pencil icon) at the top right of the file view.
+- Make your changes and commit the changes.
 
----
+**Use GitHub Codespaces**
 
-## 👥 Team Details
-**Team Name:** Inferno  
+- Navigate to the main page of your repository.
+- Click on the "Code" button (green button) near the top right.
+- Select the "Codespaces" tab.
+- Click on "New codespace" to launch a new Codespace environment.
+- Edit files directly within the Codespace and commit and push your changes once you're done.
 
-**Team Members:**
-- Kanagalakshmi A (Team Leader)  
-- Karthikeyan E V  
-- Kaviya A  
+## What technologies are used for this project?
 
-**College:** SSN College of Engineering  
-**Department:** 2nd Year CSE  
+This project is built with:
 
----
+- Vite
+- TypeScript
+- React
+- shadcn-ui
+- Tailwind CSS
 
-## 🏁 Hackathon Details
-- **Hackathon Name:** Neurathon  
-- **Organizer:** New Price Shri Bhavani College of Engineering  
+## How can I deploy this project?
 
----
+Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
 
-⭐ If you like this project, feel free to star the repository!
+## Can I connect a custom domain to my Lovable project?
+
+Yes, you can!
+
+To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+
+Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
