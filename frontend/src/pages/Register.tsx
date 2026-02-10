@@ -1,11 +1,14 @@
+// frontend/src/pages/Register.tsx - COMPLETE CORRECTED FILE
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Shield, User, Mail, Lock, Phone, GraduationCap, BookOpen, Calendar, Eye, EyeOff, FileText, Building2, Briefcase, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { profileAPI } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { collection, addDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 
 type Role = "student" | "recruiter";
 
@@ -14,6 +17,7 @@ const Register = () => {
   const [role, setRole] = useState<Role | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const [studentForm, setStudentForm] = useState({
     name: "", email: "", phone: "", password: "",
@@ -25,26 +29,106 @@ const Register = () => {
     company: "", designation: "", companyWebsite: "",
   });
 
-  const updateStudent = (field: string, value: string) => setStudentForm(f => ({ ...f, [field]: value }));
-  const updateRecruiter = (field: string, value: string) => setRecruiterForm(f => ({ ...f, [field]: value }));
+  const updateStudent = (field: string, value: string) =>
+    setStudentForm(f => ({ ...f, [field]: value }));
 
-  const handleStudentSubmit = (e: React.FormEvent) => {
+  const updateRecruiter = (field: string, value: string) =>
+    setRecruiterForm(f => ({ ...f, [field]: value }));
+
+  const handleStudentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { password, ...profileData } = studentForm;
-    profileAPI.saveRegistration({
-      ...profileData, bio: "", skills: [], linkedin: "", github: "",
-      resumeName: resumeFile?.name || "", resumeUrl: resumeFile ? URL.createObjectURL(resumeFile) : "",
-    });
-    toast({ title: "Account created!", description: "Welcome to JobNexis." });
-    navigate("/student");
+    setLoading(true);
+
+    try {
+      // 1. Create Firebase auth user
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        studentForm.email,
+        studentForm.password
+      );
+
+      const user = userCredential.user;
+
+      // 2. Save student data to Firestore
+      await addDoc(collection(db, "users"), {
+        uid: user.uid,
+        email: user.email,
+        role: "student",
+        name: studentForm.name,
+        phone: studentForm.phone,
+        college: studentForm.college,
+        degree: studentForm.degree,
+        graduationYear: studentForm.graduationYear,
+        createdAt: new Date(),
+        profileComplete: false
+      });
+
+      // 3. Success toast
+      toast({
+        title: "Account created!",
+        description: "Welcome to JobNexis as a student.",
+      });
+
+      // 4. Redirect to student dashboard
+      navigate("/student");
+
+    } catch (error: any) {
+      toast({
+        title: "Registration failed",
+        description: error.message || "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleRecruiterSubmit = (e: React.FormEvent) => {
+  const handleRecruiterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { password, ...profileData } = recruiterForm;
-    profileAPI.saveRecruiterRegistration(profileData);
-    toast({ title: "Account created!", description: "Welcome to JobNexis, Recruiter." });
-    navigate("/student"); // TODO: recruiter dashboard
+    setLoading(true);
+
+    try {
+      // 1. Create Firebase auth user
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        recruiterForm.email,
+        recruiterForm.password
+      );
+
+      const user = userCredential.user;
+
+      // 2. Save recruiter data to Firestore
+      await addDoc(collection(db, "users"), {
+        uid: user.uid,
+        email: user.email,
+        role: "recruiter",
+        name: recruiterForm.name,
+        phone: recruiterForm.phone,
+        company: recruiterForm.company,
+        designation: recruiterForm.designation,
+        companyWebsite: recruiterForm.companyWebsite,
+        createdAt: new Date(),
+        profileComplete: false
+      });
+
+      // 3. Success toast
+      toast({
+        title: "Account created!",
+        description: "Welcome to JobNexis as a recruiter.",
+      });
+
+      // 4. Redirect to recruiter dashboard
+      navigate("/recruiter");
+
+    } catch (error: any) {
+      toast({
+        title: "Registration failed",
+        description: error.message || "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Role selection screen
@@ -226,7 +310,14 @@ const Register = () => {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" size="lg">Create Student Account</Button>
+              <Button
+                type="submit"
+                className="w-full"
+                size="lg"
+                disabled={loading}
+              >
+                {loading ? "Creating account..." : "Create Student Account"}
+              </Button>
             </form>
           ) : (
             <form onSubmit={handleRecruiterSubmit} className="space-y-4">
@@ -301,7 +392,14 @@ const Register = () => {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" size="lg">Create Recruiter Account</Button>
+              <Button
+                type="submit"
+                className="w-full"
+                size="lg"
+                disabled={loading}
+              >
+                {loading ? "Creating account..." : "Create Recruiter Account"}
+              </Button>
             </form>
           )}
 
