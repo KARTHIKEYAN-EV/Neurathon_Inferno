@@ -15,7 +15,20 @@ export interface Job {
     status: "pending" | "approved" | "rejected" | "banned";
     submittedAt: string;
 }
-
+export interface StudentProfile {
+    name: string;
+    email: string;
+    phone: string;
+    college: string;
+    degree: string;
+    graduationYear: string;
+    bio: string;
+    skills: string[];
+    linkedin: string;
+    github: string;
+    resumeName: string;
+    resumeUrl: string;
+}
 export interface Recruiter {
     id: number;
     company: string;
@@ -37,7 +50,8 @@ export interface Report {
 const JOBS_KEY = "jobnexis_jobs";
 const RECRUITERS_KEY = "jobnexis_recruiters";
 const REPORTS_KEY = "jobnexis_reports";
-
+const PROFILE_KEY = "jobnexis-student-profile";
+const RECRUITER_KEY = "jobnexis-recruiter";
 function getStore<T>(key: string, fallback: T[]): T[] {
     try {
         const raw = localStorage.getItem(key);
@@ -46,7 +60,20 @@ function getStore<T>(key: string, fallback: T[]): T[] {
         return fallback;
     }
 }
-
+const defaultProfile: StudentProfile = {
+    name: "Student User",
+    email: "student@example.com",
+    phone: "+91 9876543210",
+    college: "IIT Delhi",
+    degree: "B.Tech Computer Science",
+    graduationYear: "2026",
+    bio: "Passionate about technology and building impactful solutions.",
+    skills: ["React", "TypeScript", "Python", "Node.js"],
+    linkedin: "https://linkedin.com/in/student",
+    github: "https://github.com/student",
+    resumeName: "",
+    resumeUrl: "",
+};
 function setStore<T>(key: string, data: T[]) {
     localStorage.setItem(key, JSON.stringify(data));
     // Dispatch a custom event so other tabs/components can react
@@ -208,4 +235,47 @@ export const getAdminStats = () => {
         flaggedJobs: jobs.filter(j => j.risk === "high").length,
         reports: reports.length,
     };
+};
+
+function sync() {
+    window.dispatchEvent(new Event("jobnexis-sync"));
+}
+
+
+function getStorage<T>(key: string, defaultValue: T): T {
+    try {
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : defaultValue;
+    } catch {
+        return defaultValue;
+    }
+}
+function setStorage<T>(key: string, value: T): void {
+    localStorage.setItem(key, JSON.stringify(value));
+}
+export interface RecruiterProfile {
+    name: string;
+    email: string;
+    phone: string;
+    company: string;
+    designation: string;
+    companyWebsite: string;
+}
+export const profileAPI = {
+    getProfile: (): StudentProfile => getStorage(PROFILE_KEY, defaultProfile),
+    updateProfile: (profile: StudentProfile): StudentProfile => {
+        setStorage(PROFILE_KEY, profile);
+        return profile;
+    },
+    saveRegistration: (data: Partial<StudentProfile>): StudentProfile => {
+        const profile = { ...defaultProfile, ...data };
+        setStorage(PROFILE_KEY, profile);
+        return profile;
+    },
+    getRecruiterProfile: (): RecruiterProfile => getStorage(RECRUITER_KEY, { name: "", email: "", phone: "", company: "", designation: "", companyWebsite: "" }),
+    saveRecruiterRegistration: (data: Partial<RecruiterProfile>): RecruiterProfile => {
+        const profile = { name: "", email: "", phone: "", company: "", designation: "", companyWebsite: "", ...data };
+        setStorage(RECRUITER_KEY, profile);
+        return profile;
+    },
 };

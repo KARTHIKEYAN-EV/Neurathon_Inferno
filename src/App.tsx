@@ -10,7 +10,7 @@ import StudentDashboard from "./pages/StudentDashboard";
 import RecruiterDashboard from "./pages/RecruiterDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
-
+import StudentProfile from "./pages/StudentProfile";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -27,6 +27,7 @@ const App = () => (
           <Route path="/recruiter" element={<RecruiterDashboard />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="*" element={<NotFound />} />
+          <Route path="/profile" element={<StudentProfile />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>

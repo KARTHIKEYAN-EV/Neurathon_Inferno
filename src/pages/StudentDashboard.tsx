@@ -1,35 +1,35 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { Shield, Search, Filter, MapPin, DollarSign, Briefcase, Flag, ExternalLink, LogOut } from "lucide-react";
+import { Shield, Search, Filter, MapPin, DollarSign, Briefcase, Flag, ExternalLink, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import StatusBadge from "@/components/StatusBadge";
 import { jobAPI, type Job } from "@/lib/api";
+
 const StudentDashboard = () => {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
+
   const loadJobs = useCallback(() => {
     const approved = jobAPI.getAllJobs().filter(j => j.status === "approved");
     setJobs(approved);
   }, []);
+
   useEffect(() => {
     loadJobs();
-    const handler = () => loadJobs();
-    window.addEventListener("jobnexis-sync", handler);
-    const interval = setInterval(loadJobs, 2000);
-    return () => {
-      window.removeEventListener("jobnexis-sync", handler);
-      clearInterval(interval);
-    };
+    const interval = setInterval(loadJobs, 5000);
+    return () => clearInterval(interval);
   }, [loadJobs]);
+
   const filtered = jobs.filter((job) => {
     const matchSearch = job.title.toLowerCase().includes(search.toLowerCase()) || job.company.toLowerCase().includes(search.toLowerCase());
     const matchType = typeFilter === "all" || job.jobType.toLowerCase() === typeFilter;
     return matchSearch && matchType;
   });
+
   return (
     <div className="min-h-screen bg-background">
       <header className="bg-card border-b border-border sticky top-0 z-40">
@@ -39,16 +39,23 @@ const StudentDashboard = () => {
             <span className="font-display text-lg font-bold text-foreground">JOBNEXIS</span>
             <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium ml-2">Student</span>
           </div>
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/"><LogOut className="h-4 w-4 mr-1" /> Sign Out</Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/profile"><User className="h-4 w-4 mr-1" /> Profile</Link>
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/"><LogOut className="h-4 w-4 mr-1" /> Sign Out</Link>
+            </Button>
+          </div>
         </div>
       </header>
+
       <main className="container mx-auto px-4 py-6">
         <div className="mb-6">
           <h1 className="font-display text-2xl font-bold text-foreground">Find Safe Jobs</h1>
           <p className="text-sm text-muted-foreground">All listings are verified and AI-cleared</p>
         </div>
+
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -66,6 +73,7 @@ const StudentDashboard = () => {
             </SelectContent>
           </Select>
         </div>
+
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-3">
             {filtered.map((job) => (
@@ -96,6 +104,7 @@ const StudentDashboard = () => {
               <div className="text-center py-12 text-muted-foreground">No jobs found matching your criteria.</div>
             )}
           </div>
+
           <div className="bg-card rounded-xl border border-border p-5 h-fit sticky top-20">
             {selectedJob ? (
               <div className="space-y-4">
@@ -116,9 +125,6 @@ const StudentDashboard = () => {
                   <p><strong className="text-foreground">Type:</strong> <span className="text-muted-foreground">{selectedJob.jobType}</span></p>
                   <p><strong className="text-foreground">Description:</strong> <span className="text-muted-foreground">{selectedJob.description}</span></p>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  This position has been verified by our team and cleared by AI fraud detection. It is safe to apply.
-                </p>
                 <div className="flex gap-2">
                   <Button className="flex-1" asChild>
                     <a href={selectedJob.applicationLink} target="_blank" rel="noopener noreferrer">
@@ -142,4 +148,5 @@ const StudentDashboard = () => {
     </div>
   );
 };
+
 export default StudentDashboard;
